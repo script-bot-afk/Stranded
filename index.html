@@ -1,60 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stranded</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🚗 Stranded Survival</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <h1>🚗 Stranded</h1>
+<h1>🚗 Stranded Survival Game</h1>
 
-  <section id="instructions">
-    <p>Your car broke down on a camping trip.</p>
-    <p>You are stranded in the wilderness.</p>
+<section id="instructions">
+  <h2>Instructions & Story</h2>
+  <p>Your car broke down on a camping trip. You are stranded in the wilderness.</p>
+  <p><strong>Goal:</strong> Repair the car and escape.</p>
+  <p><strong>Car repair requirements:</strong> 7 Metal, 9 Wood</p>
 
-    <p><strong>Goal:</strong> Fix the car and escape.</p>
-    <p><strong>Requirements:</strong></p>
-    <ul>
-      <li>🧱 7 Metal</li>
-      <li>🪵 9 Wood</li>
-    </ul>
+  <h3>Survival Systems</h3>
+  <ul>
+    <li>🍗 Hunger & 💧 Thirst drain daily</li>
+    <li>⚡ Energy required for actions, scaled with activity</li>
+    <li>🔥 Fire keeps you warm; no fire = hypothermia (energy drains fast, health slowly)</li>
+    <li>📅 Days stranded are tracked</li>
+  </ul>
 
-    <p><strong>Systems:</strong></p>
-    <ul>
-      <li>🍗 Hunger & 💧 Thirst drain daily</li>
-      <li>⚡ Energy is required for all actions</li>
-      <li>🔥 Fire keeps you warm at night</li>
-      <li>❄️ No fire → hypothermia (fast energy drain, slow health drain)</li>
-      <li>📅 Days stranded are tracked</li>
-    </ul>
+  <h3>Blueprints (Rare Finds)</h3>
+  <ul>
+    <li>🔫 Revolver Blueprint (2 Metal + 1 Wood → craft revolver; craft bullets 1 Metal → 9 bullets)</li>
+    <li>🛏️ Soft Mattress Blueprint (16 Wood → 2× energy from sleep)</li>
+  </ul>
 
-    <p><strong>Blueprints (Rare):</strong></p>
-    <ul>
-      <li>🔫 Revolver Blueprint  
-        (2 Metal, 1 Wood → safer hunting)</li>
-      <li>🛏️ Soft Mattress Blueprint  
-        (16 Wood → 2× energy from sleep)</li>
-    </ul>
-  </section>
+  <h3>Random Events</h3>
+  <ul>
+    <li>🐻 Bears, 🌧️ bad weather, 🩹 injuries</li>
+    <li>Rare blueprint finds while scavenging</li>
+  </ul>
 
-  <section id="stats">
-    <div>Day: <span id="day">1</span></div>
-    <div>Health: <span id="health">100</span></div>
-    <div>Energy: <span id="energy">100</span></div>
-    <div>Hunger: <span id="hunger">100</span></div>
-    <div>Thirst: <span id="thirst">100</span></div>
-    <div>🔥 Fire: <span id="fire">Off</span></div>
-    <div>🪵 Wood: <span id="wood">0</span></div>
-    <div>🧱 Metal: <span id="metal">0</span></div>
-    <div>🚗 Repair Progress: <span id="repair">0%</span></div>
-  </section>
+  <h3>Win/Lose</h3>
+  <ul>
+    <li>✅ Win: Repair car</li>
+    <li>❌ Lose: Health reaches 0</li>
+  </ul>
+</section>
 
-  <section id="actions"></section>
+<section id="stats">
+  <div>Day: <span id="day">1</span></div>
+  <div>Health: <span id="health">100</span></div>
+  <div>Energy: <span id="energy">100</span></div>
+  <div>Hunger: <span id="hunger">100</span></div>
+  <div>Thirst: <span id="thirst">100</span></div>
+  <div>🔥 Fire: <span id="fire">Off</span></div>
+  <div>🪵 Wood: <span id="wood">0</span></div>
+  <div>🧱 Metal: <span id="metal">0</span></div>
+  <div>🔫 Bullets: <span id="bullets">0</span></div>
+  <div>🚗 Repair Progress: <span id="repair">0%</span></div>
+</section>
 
-  <section id="log"></section>
+<section id="actions"></section>
+<section id="log"></section>
 
-  <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
