@@ -1,0 +1,45 @@
+body {
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 12px;
+}
+
+h1 {
+  text-align: center;
+}
+
+section {
+  margin-bottom: 16px;
+}
+
+#stats div {
+  margin: 2px 0;
+}
+
+button {
+  width: 100%;
+  margin: 4px 0;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  font-size: 16px;
+}
+
+button.yellow {
+  background: #facc15;
+  color: #111;
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+#log {
+  background: #020617;
+  padding: 8px;
+  min-height: 80px;
+  font-size: 14px;
+}
