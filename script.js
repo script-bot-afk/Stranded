@@ -1,255 +1,269 @@
-/* ------------------------------
-   Stranded Survival Game v1.0
-   Full, unoptimized version
-   All features included
------------------------------- */
+// ==============================
+// STRANDED - FULL SCRIPT.JS
+// ==============================
 
+// ---------- GAME STATE ----------
 const state = {
-    day: 1,
-    health: 100,
-    energy: 100,
-    hunger: 100,
-    thirst: 100,
-    fire: false,
-    wood: 0,
-    metal: 0,
-    repair: 0,
-    blueprints: {
-        revolver: false,
-        mattress: false
-    },
-    hasRevolver: false,
-    bullets: 0,
-    hasMattress: false
+  day: 1,
+
+  health: 100,
+  hunger: 100,
+  thirst: 100,
+  energy: 100,
+
+  wood: 0,
+  metal: 0,
+  fish: 0,
+  bullets: 0,
+
+  plantFiber: 0,
+  bandage: 0,
+
+  fire: false,
+  fireFuel: 0, // days remaining
+
+  mattress: false,
+  revolver: false,
+
+  carRepair: 0 // percent
 };
 
-const logEl = document.getElementById("log");
-const actionsEl = document.getElementById("actions");
+// ---------- HELPERS ----------
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 function log(msg) {
-    logEl.innerHTML = `<div>${msg}</div>` + logEl.innerHTML;
-    if (logEl.children.length > 12) logEl.removeChild(logEl.lastChild);
+  const box = document.getElementById("log");
+  box.innerHTML += `<div>${msg}</div>`;
+  box.scrollTop = box.scrollHeight;
 }
 
-function updateUI() {
-    for (let key of ["day","health","energy","hunger","thirst","wood","metal","bullets"]) {
-        if(document.getElementById(key)) document.getElementById(key).textContent = state[key];
+// ---------- DAILY DRAIN ----------
+function dailyDrain() {
+  let hungerLoss = 8;
+  let thirstLoss = 12;
+  let energyLoss = 5;
+
+  // Fire helps survival
+  if (state.fire) {
+    hungerLoss -= 3;
+    thirstLoss -= 4;
+    energyLoss -= 2;
+  }
+
+  // Mattress improves rest
+  if (state.mattress) {
+    energyLoss -= 3;
+  }
+
+  hungerLoss = Math.max(2, hungerLoss);
+  thirstLoss = Math.max(3, thirstLoss);
+  energyLoss = Math.max(1, energyLoss);
+
+  state.hunger -= hungerLoss;
+  state.thirst -= thirstLoss;
+  state.energy -= energyLoss;
+
+  // Hypothermia
+  if (!state.fire && !state.mattress) {
+    state.health -= 4;
+    log("❄️ You are freezing. Health -4.");
+  }
+
+  // Starvation / dehydration
+  if (state.hunger <= 0 || state.thirst <= 0) {
+    state.health -= 6;
+    log("⚠️ Starvation or dehydration is hurting you.");
+  }
+
+  // Slow health recovery
+  if (
+    state.hunger > 60 &&
+    state.thirst > 60 &&
+    state.energy > 40 &&
+    (state.fire || state.mattress)
+  ) {
+    state.health = Math.min(100, state.health + 2);
+    log("🩹 You recover a little health.");
+  }
+
+  // Fire fuel burn
+  if (state.fire) {
+    state.fireFuel--;
+    if (state.fireFuel <= 0) {
+      state.fire = false;
+      log("🔥 The fire burned out.");
     }
-    document.getElementById("fire").textContent = state.fire ? "On" : "Off";
-    document.getElementById("repair").textContent = state.repair + "%";
+  }
+
+  // Clamp stats
+  state.hunger = Math.max(0, state.hunger);
+  state.thirst = Math.max(0, state.thirst);
+  state.energy = Math.max(0, state.energy);
+  state.health = Math.max(0, state.health);
 }
 
-function clamp() {
-    for (let k of ["health","energy","hunger","thirst"]) {
-        state[k] = Math.max(0, Math.min(100, state[k]));
-    }
-    if(state.health <= 0){
-        actionsEl.innerHTML = "";
-        log("💀 You did not survive. Game Over.");
-    }
+// ---------- ACTION HANDLER ----------
+function doAction(cost, fn) {
+  if (state.energy < cost) {
+    log("😴 You’re too tired to do that.");
+    return;
+  }
+
+  state.energy -= cost;
+  fn();
+
+  dailyDrain();
+  state.day++;
+
+  render();
 }
 
-function endDay() {
-    state.day++;
-    // Daily drain
-    state.hunger -= 8;
-    state.thirst -= 12;
-    
-    // Fire check
-    if(!state.fire) {
-        state.energy -= 15;
-        state.health -= 4;
-        log("❄️ Hypothermia sets in! Energy drains fast, health slowly.");
-    }
-    
-    // Hunger/Thirst critical
-    if(state.hunger <=0 || state.thirst <=0) {
-        state.health -= 8;
-        log("⚠️ You are starving or dehydrated! Health dropping.");
-    }
-    
-    // Random chance fire goes out
-    if(state.fire && Math.random() < 0.15){
-        state.fire = false;
-        log("🔥 Your fire has gone out!");
-    }
-    
-    clamp();
+// ---------- BUTTON ----------
+function action(text, cost, fn, yellow = false) {
+  const btn = document.createElement("button");
+  btn.textContent = `${text} (-${cost}⚡)`;
+  if (yellow) btn.classList.add("yellow");
+  btn.onclick = () => doAction(cost, fn);
+  document.getElementById("actions").appendChild(btn);
 }
 
-// Energy scaling helper
-function drainEnergy(amount){
-    let modifier = 1;
-    if(state.hunger < 40) modifier += 0.25;
-    if(state.thirst < 40) modifier += 0.4;
-    state.energy -= Math.ceil(amount * modifier);
-    if(state.energy <0) state.energy =0;
+// ---------- RENDER ----------
+function render() {
+  document.getElementById("stats").innerHTML = `
+📅 Day ${state.day}<br><br>
+❤️ Health: ${state.health}<br>
+🍖 Hunger: ${state.hunger}<br>
+💧 Thirst: ${state.thirst}<br>
+⚡ Energy: ${state.energy}<br><br>
+
+🪵 Wood: ${state.wood}<br>
+🔩 Metal: ${state.metal}<br>
+🌿 Fibers: ${state.plantFiber}<br>
+🩹 Bandages: ${state.bandage}<br>
+🐟 Fish: ${state.fish}<br>
+🔫 Bullets: ${state.bullets}<br><br>
+
+🔥 Fire: ${state.fire ? `Burning (${state.fireFuel} days)` : "Out"}<br>
+🛏️ Mattress: ${state.mattress ? "Yes" : "No"}<br>
+🚗 Car Repair: ${state.carRepair}%
+`;
+
+  const actions = document.getElementById("actions");
+  actions.innerHTML = "";
+
+  // ---------- GATHERING ----------
+  action("🌲 Scavenge Wood", 6, () => {
+    const g = rand(2, 5);
+    state.wood += g;
+    log(`🪵 You gathered ${g} wood.`);
+  });
+
+  action("🔧 Scavenge Metal", 7, () => {
+    const g = rand(1, 3);
+    state.metal += g;
+    log(`🔩 You found ${g} metal.`);
+  });
+
+  action("🐟 Fish", 8, () => {
+    const food = rand(1, 3);
+    const fibers = rand(2, 10);
+    state.fish += food;
+    state.plantFiber += fibers;
+    log(`🐟 You caught fish and collected ${fibers} plant fibers.`);
+  });
+
+  // ---------- FIRE ----------
+  if (!state.fire && state.wood >= 1) {
+    action("🔥 Build Fire", 4, () => {
+      state.wood -= 1;
+      state.fire = true;
+      state.fireFuel = 3;
+      log("🔥 You started a campfire using 1 wood.");
+    });
+  }
+
+  if (state.fire && state.wood >= 1) {
+    action("🔥 Add Wood to Fire", 2, () => {
+      state.wood--;
+      state.fireFuel += 2;
+      log("🔥 You added wood to the fire.");
+    });
+  }
+
+  // ---------- FOOD ----------
+  if (state.fish > 0) {
+    action("🍖 Eat Fish", 2, () => {
+      state.fish--;
+      state.hunger = Math.min(100, state.hunger + 20);
+      log("🍖 You eat fish.");
+    });
+  }
+
+  // ---------- WATER ----------
+  action("💧 Drink Water", 1, () => {
+    state.thirst = Math.min(100, state.thirst + 25);
+    log("💧 You drink water.");
+  });
+
+  // ---------- BANDAGES ----------
+  if (state.plantFiber >= 2) {
+    action("🩹 Craft Bandage", 2, () => {
+      state.plantFiber -= 2;
+      state.bandage++;
+      log("🩹 You crafted a bandage.");
+    }, true);
+  }
+
+  if (state.bandage > 0) {
+    action("🩹 Use Bandage", 1, () => {
+      state.bandage--;
+      state.health = Math.min(100, Math.floor(state.health * 1.5));
+      log("🩹 You used a bandage.");
+    });
+  }
+
+  // ---------- MATTRESS ----------
+  if (!state.mattress && state.wood >= 16 && state.plantFiber >= 7) {
+    action("🛏️ Craft Mattress", 10, () => {
+      state.wood -= 16;
+      state.plantFiber -= 7;
+      state.mattress = true;
+      log("🛏️ You crafted a soft mattress.");
+    }, true);
+  }
+
+  // ---------- REVOLVER ----------
+  if (!state.revolver && state.metal >= 2 && state.wood >= 1) {
+    action("🔫 Craft Revolver", 8, () => {
+      state.metal -= 2;
+      state.wood -= 1;
+      state.revolver = true;
+      log("🔫 You crafted a revolver.");
+    }, true);
+  }
+
+  if (state.revolver && state.metal >= 1) {
+    action("🔫 Craft Bullets (9)", 4, () => {
+      state.metal--;
+      state.bullets += 9;
+      log("🔫 You crafted bullets.");
+    });
+  }
+
+  // ---------- CAR REPAIR ----------
+  if (state.wood >= 9 && state.metal >= 7 && state.carRepair < 100) {
+    action("🚗 Repair Car", 6, () => {
+      state.carRepair += 10;
+      log(`🚗 Repair progress: ${state.carRepair}%`);
+      if (state.carRepair >= 100) {
+        log("🎉 You fixed the car and escaped!");
+      }
+    }, true);
+  }
 }
 
-// Action helper
-function action(name, baseEnergy, fn, cls=""){
-    const btn = document.createElement("button");
-    btn.textContent = name;
-    btn.className = cls;
-    btn.onclick = ()=>{
-        if(state.energy < baseEnergy){
-            log("😫 Too exhausted to do this.");
-            return;
-        }
-        drainEnergy(baseEnergy);
-        fn();
-        endDay();
-        updateUI();
-        renderActions();
-    };
-    actionsEl.appendChild(btn);
-}
-
-// Random Events
-function randomEvent(){
-    const roll = Math.random();
-    if(roll < 0.08){
-        state.health -= 10;
-        log("🐻 Bear attack! You lose 10 health.");
-    } else if(roll < 0.15){
-        state.energy -= 10;
-        log("🌧️ Bad weather slows you down! Energy drops.");
-    } else if(roll < 0.20 && !state.blueprints.revolver){
-        state.blueprints.revolver = true;
-        log("📜 You found a rare Revolver Blueprint!");
-    } else if(roll < 0.22 && !state.blueprints.mattress){
-        state.blueprints.mattress = true;
-        log("📜 You found a rare Soft Mattress Blueprint!");
-    }
-}
-
-function renderActions(){
-    actionsEl.innerHTML = "";
-    
-    // Gather wood
-    action("🪵 Gather Wood (-10)",10,()=>{
-        state.wood += Math.floor(Math.random()*3)+1;
-        log("You gathered some wood.");
-        randomEvent();
-    });
-
-    // Scavenge metal
-    action("🧱 Scavenge Metal (-12)",12,()=>{
-        if(Math.random() <0.6) {
-            state.metal +=1;
-            log("You found metal!");
-        } else {
-            log("No metal found.");
-        }
-        randomEvent();
-    });
-
-    // Hunt
-    action("🏹 Hunt (-18)",18,()=>{
-        let success = Math.random();
-        if(state.hasRevolver) success += 0.3;
-        if(success >0.4){
-            state.hunger += 20;
-            state.thirst += 10;
-            log("🎯 Successful hunt! Hunger and thirst improved.");
-        } else{
-            log("❌ Hunt failed.");
-        }
-        randomEvent();
-    });
-
-    // Fish
-    action("🎣 Fish (-12)",12,()=>{
-        let success = Math.random();
-        if(state.hasRevolver) success += 0.2;
-        if(success>0.4){
-            state.hunger += 15;
-            log("🐟 You caught some fish!");
-        } else {
-            log("No luck fishing.");
-        }
-        randomEvent();
-    });
-
-    // Build fire
-    action("🔥 Build Fire (-9)",9,()=>{
-        if(state.wood>=2){
-            state.wood-=2;
-            state.fire = true;
-            log("Fire is burning.");
-        } else log("Not enough wood to build fire.");
-    });
-
-    // Sleep
-    action("😴 Sleep",0,()=>{
-        let gain = state.fire ? 40 : 25;
-        if(state.hasMattress) gain *= 2;
-        state.energy = Math.min(100, state.energy + gain);
-        log("You slept and recovered energy.");
-        randomEvent();
-    });
-
-    // Drink
-    action("💧 Drink Water (-1)",1,()=>{
-        state.thirst = Math.min(100,state.thirst +25);
-        log("You drank water.");
-    });
-
-    // Eat
-    action("🍗 Eat (-1)",1,()=>{
-        state.hunger = Math.min(100,state.hunger +20);
-        log("You ate food.");
-    });
-
-    // Craft Revolver
-    if(state.blueprints.revolver && !state.hasRevolver){
-        action("🔫 Craft Revolver (-14)",14,()=>{
-            if(state.metal >=2 && state.wood>=1){
-                state.metal -=2;
-                state.wood -=1;
-                state.hasRevolver = true;
-                state.blueprints.revolver=false;
-                log("You crafted a revolver!");
-            } else log("Not enough materials to craft revolver.");
-        },"yellow");
-    }
-
-    // Craft bullets
-    if(state.hasRevolver){
-        action("🔫 Craft 9 Bullets (-6)",6,()=>{
-            if(state.metal>=1){
-                state.metal-=1;
-                state.bullets +=9;
-                log("You crafted 9 bullets.");
-            } else log("Not enough metal to craft bullets.");
-        },"yellow");
-    }
-
-    // Craft Mattress
-    if(state.blueprints.mattress && !state.hasMattress){
-        action("🛏️ Craft Soft Mattress (-22)",22,()=>{
-            if(state.wood>=16){
-                state.wood -=16;
-                state.hasMattress = true;
-                state.blueprints.mattress = false;
-                log("You crafted a soft mattress!");
-            } else log("Not enough wood to craft mattress.");
-        },"yellow");
-    }
-
-    // Repair Car
-    if(state.wood>=9 && state.metal>=7){
-        action("🚗 Repair Car (-3)",3,()=>{
-            state.repair=100;
-            actionsEl.innerHTML="";
-            log("🎉 You repaired the car and escaped! Victory!");
-        });
-    }
-
-    updateUI();
-}
-
-// Initialize
-updateUI();
-renderActions();
-log("Day 1: Your car broke down. Survive and repair it!");
+// ---------- START ----------
+log("🚗 Your car broke down. You are stranded.");
+render();
