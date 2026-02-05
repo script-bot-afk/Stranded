@@ -1,5 +1,5 @@
 // ==============================
-// STRANDED - FULL SCRIPT.JS
+// STRANDED - FULL SCRIPT.JS (v2)
 // ==============================
 
 // ---------- GAME STATE ----------
@@ -20,17 +20,26 @@ const state = {
   bandage: 0,
 
   fire: false,
-  fireFuel: 0, // days remaining
+  fireFuel: 0,
 
   mattress: false,
   revolver: false,
 
-  carRepair: 0 // percent
+  carRepair: 0
 };
+
+const MAX = 100;
 
 // ---------- HELPERS ----------
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function clamp() {
+  state.health = Math.max(0, Math.min(MAX, state.health));
+  state.hunger = Math.max(0, Math.min(MAX, state.hunger));
+  state.thirst = Math.max(0, Math.min(MAX, state.thirst));
+  state.energy = Math.max(0, Math.min(MAX, state.energy));
 }
 
 function log(msg) {
@@ -45,14 +54,12 @@ function dailyDrain() {
   let thirstLoss = 12;
   let energyLoss = 5;
 
-  // Fire helps survival
   if (state.fire) {
     hungerLoss -= 3;
     thirstLoss -= 4;
     energyLoss -= 2;
   }
 
-  // Mattress improves rest
   if (state.mattress) {
     energyLoss -= 3;
   }
@@ -65,7 +72,7 @@ function dailyDrain() {
   state.thirst -= thirstLoss;
   state.energy -= energyLoss;
 
-  // Hypothermia
+  // Cold damage
   if (!state.fire && !state.mattress) {
     state.health -= 4;
     log("❄️ You are freezing. Health -4.");
@@ -74,21 +81,21 @@ function dailyDrain() {
   // Starvation / dehydration
   if (state.hunger <= 0 || state.thirst <= 0) {
     state.health -= 6;
-    log("⚠️ Starvation or dehydration is hurting you.");
+    log("⚠️ Starvation or dehydration hurts you.");
   }
 
-  // Slow health recovery
+  // Recovery
   if (
     state.hunger > 60 &&
     state.thirst > 60 &&
     state.energy > 40 &&
     (state.fire || state.mattress)
   ) {
-    state.health = Math.min(100, state.health + 2);
+    state.health += 2;
     log("🩹 You recover a little health.");
   }
 
-  // Fire fuel burn
+  // Fire fuel
   if (state.fire) {
     state.fireFuel--;
     if (state.fireFuel <= 0) {
@@ -97,17 +104,19 @@ function dailyDrain() {
     }
   }
 
-  // Clamp stats
-  state.hunger = Math.max(0, state.hunger);
-  state.thirst = Math.max(0, state.thirst);
-  state.energy = Math.max(0, state.energy);
-  state.health = Math.max(0, state.health);
+  clamp();
+
+  if (state.health <= 0) {
+    log("💀 You didn’t survive.");
+    alert("Game Over");
+    location.reload();
+  }
 }
 
 // ---------- ACTION HANDLER ----------
 function doAction(cost, fn) {
   if (state.energy < cost) {
-    log("😴 You’re too tired to do that.");
+    log("😴 Too tired to do that.");
     return;
   }
 
@@ -171,16 +180,16 @@ function render() {
     const fibers = rand(2, 10);
     state.fish += food;
     state.plantFiber += fibers;
-    log(`🐟 You caught fish and collected ${fibers} plant fibers.`);
+    log(`🐟 You caught fish and collected ${fibers} fibers.`);
   });
 
   // ---------- FIRE ----------
   if (!state.fire && state.wood >= 1) {
     action("🔥 Build Fire", 4, () => {
-      state.wood -= 1;
+      state.wood--;
       state.fire = true;
       state.fireFuel = 3;
-      log("🔥 You started a campfire using 1 wood.");
+      log("🔥 You started a fire.");
     });
   }
 
@@ -188,7 +197,7 @@ function render() {
     action("🔥 Add Wood to Fire", 2, () => {
       state.wood--;
       state.fireFuel += 2;
-      log("🔥 You added wood to the fire.");
+      log("🔥 You added fuel.");
     });
   }
 
@@ -196,14 +205,16 @@ function render() {
   if (state.fish > 0) {
     action("🍖 Eat Fish", 2, () => {
       state.fish--;
-      state.hunger = Math.min(100, state.hunger + 20);
-      log("🍖 You eat fish.");
+      state.hunger += 20;
+      state.energy += 18;
+      log("🍖 You eat fish and feel energized.");
     });
   }
 
   // ---------- WATER ----------
   action("💧 Drink Water", 1, () => {
-    state.thirst = Math.min(100, state.thirst + 25);
+    state.thirst += 25;
+    state.energy += 5;
     log("💧 You drink water.");
   });
 
@@ -212,14 +223,14 @@ function render() {
     action("🩹 Craft Bandage", 2, () => {
       state.plantFiber -= 2;
       state.bandage++;
-      log("🩹 You crafted a bandage.");
+      log("🩹 Bandage crafted.");
     }, true);
   }
 
   if (state.bandage > 0) {
     action("🩹 Use Bandage", 1, () => {
       state.bandage--;
-      state.health = Math.min(100, Math.floor(state.health * 1.5));
+      state.health = Math.min(MAX, Math.floor(state.health * 1.5));
       log("🩹 You used a bandage.");
     });
   }
@@ -230,7 +241,7 @@ function render() {
       state.wood -= 16;
       state.plantFiber -= 7;
       state.mattress = true;
-      log("🛏️ You crafted a soft mattress.");
+      log("🛏️ Soft mattress crafted.");
     }, true);
   }
 
@@ -240,7 +251,7 @@ function render() {
       state.metal -= 2;
       state.wood -= 1;
       state.revolver = true;
-      log("🔫 You crafted a revolver.");
+      log("🔫 Revolver crafted.");
     }, true);
   }
 
@@ -248,20 +259,22 @@ function render() {
     action("🔫 Craft Bullets (9)", 4, () => {
       state.metal--;
       state.bullets += 9;
-      log("🔫 You crafted bullets.");
+      log("🔫 Bullets crafted.");
     });
   }
 
-  // ---------- CAR REPAIR ----------
+  // ---------- CAR ----------
   if (state.wood >= 9 && state.metal >= 7 && state.carRepair < 100) {
     action("🚗 Repair Car", 6, () => {
       state.carRepair += 10;
       log(`🚗 Repair progress: ${state.carRepair}%`);
       if (state.carRepair >= 100) {
-        log("🎉 You fixed the car and escaped!");
+        log("🎉 You repaired the car and escaped!");
       }
     }, true);
   }
+
+  clamp();
 }
 
 // ---------- START ----------
