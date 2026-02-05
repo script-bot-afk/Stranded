@@ -1,6 +1,8 @@
 // ==============================
-// STRANDED - FULL SCRIPT.JS (v2)
+// STRANDED - SCRIPT.JS (FIXED)
 // ==============================
+
+const MAX = 100;
 
 // ---------- GAME STATE ----------
 const state = {
@@ -28,8 +30,6 @@ const state = {
   carRepair: 0
 };
 
-const MAX = 100;
-
 // ---------- HELPERS ----------
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -48,7 +48,7 @@ function log(msg) {
   box.scrollTop = box.scrollHeight;
 }
 
-// ---------- DAILY DRAIN ----------
+// ---------- DAILY EFFECTS ----------
 function dailyDrain() {
   let hungerLoss = 8;
   let thirstLoss = 12;
@@ -81,7 +81,7 @@ function dailyDrain() {
   // Starvation / dehydration
   if (state.hunger <= 0 || state.thirst <= 0) {
     state.health -= 6;
-    log("⚠️ Starvation or dehydration hurts you.");
+    log("⚠️ Starvation or dehydration is hurting you.");
   }
 
   // Recovery
@@ -92,7 +92,7 @@ function dailyDrain() {
     (state.fire || state.mattress)
   ) {
     state.health += 2;
-    log("🩹 You recover a little health.");
+    log("🩹 You recover some health.");
   }
 
   // Fire fuel
@@ -100,15 +100,14 @@ function dailyDrain() {
     state.fireFuel--;
     if (state.fireFuel <= 0) {
       state.fire = false;
-      log("🔥 The fire burned out.");
+      log("🔥 The fire went out.");
     }
   }
 
   clamp();
 
   if (state.health <= 0) {
-    log("💀 You didn’t survive.");
-    alert("Game Over");
+    alert("You didn’t survive.");
     location.reload();
   }
 }
@@ -130,10 +129,10 @@ function doAction(cost, fn) {
 }
 
 // ---------- BUTTON ----------
-function action(text, cost, fn, yellow = false) {
+function action(label, cost, fn, important = false) {
   const btn = document.createElement("button");
-  btn.textContent = `${text} (-${cost}⚡)`;
-  if (yellow) btn.classList.add("yellow");
+  btn.textContent = `${label} (-${cost}⚡)`;
+  if (important) btn.classList.add("yellow");
   btn.onclick = () => doAction(cost, fn);
   document.getElementById("actions").appendChild(btn);
 }
@@ -162,7 +161,7 @@ function render() {
   const actions = document.getElementById("actions");
   actions.innerHTML = "";
 
-  // ---------- GATHERING ----------
+  // ---------- GATHER ----------
   action("🌲 Scavenge Wood", 6, () => {
     const g = rand(2, 5);
     state.wood += g;
@@ -176,11 +175,9 @@ function render() {
   });
 
   action("🐟 Fish", 8, () => {
-    const food = rand(1, 3);
-    const fibers = rand(2, 10);
-    state.fish += food;
-    state.plantFiber += fibers;
-    log(`🐟 You caught fish and collected ${fibers} fibers.`);
+    state.fish += rand(1, 3);
+    state.plantFiber += rand(2, 10);
+    log("🐟 You went fishing.");
   });
 
   // ---------- FIRE ----------
@@ -211,7 +208,6 @@ function render() {
     });
   }
 
-  // ---------- WATER ----------
   action("💧 Drink Water", 1, () => {
     state.thirst += 25;
     state.energy += 5;
@@ -241,7 +237,21 @@ function render() {
       state.wood -= 16;
       state.plantFiber -= 7;
       state.mattress = true;
-      log("🛏️ Soft mattress crafted.");
+      log("🛏️ You crafted a mattress.");
+    }, true);
+  }
+
+  // ---------- SLEEP ----------
+  if (state.mattress) {
+    action("😴 Sleep", 0, () => {
+      let restore = 35;
+      if (state.fire) restore += 10;
+
+      state.energy += restore;
+      state.hunger -= 5;
+      state.thirst -= 5;
+
+      log("😴 You sleep and regain energy.");
     }, true);
   }
 
